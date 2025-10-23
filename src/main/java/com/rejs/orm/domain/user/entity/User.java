@@ -7,6 +7,7 @@ import com.rejs.orm.annotations.Id;
 @Entity
 public class User {
     @Id
+    @Column
     private Long id;
 
     @Column
