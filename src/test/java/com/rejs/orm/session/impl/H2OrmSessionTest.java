@@ -11,7 +11,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 class H2OrmSessionTest {
-    private final OrmSession ormSession = new H2OrmSession();
+    @Autowired
+    private OrmSession ormSession;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -33,7 +34,7 @@ class H2OrmSessionTest {
         assertNotNull(id);
 
         String name = jdbcTemplate.queryForObject(
-                "SELECT user_name FROM users WHERE id = ?",
+                "SELECT username FROM users WHERE id = ?",
                 String.class,
                 id
         );
