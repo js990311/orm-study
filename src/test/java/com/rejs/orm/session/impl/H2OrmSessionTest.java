@@ -41,4 +41,23 @@ class H2OrmSessionTest {
 
         assertEquals(username, name);
     }
+
+    @Test
+    void readById(){
+        // g
+        String username = "username";
+        String password = "password";
+        User user = new User(username, password);
+        ormSession.create(user);
+        Long id = user.getId();
+
+        // w
+        User readUser = ormSession.readById(User.class, id);
+
+        // t
+        assertNotNull(readUser);
+        assertEquals(user.getId(), readUser.getId());
+        assertEquals(user.getUsername(), readUser.getUsername());
+        assertEquals(user.getPassword(), readUser.getPassword());
+    }
 }

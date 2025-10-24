@@ -44,4 +44,9 @@ public class H2OrmSession implements OrmSession {
         Long id = keyHolder.getKey().longValue();
         EntityMetadata.setFieldValue(metadata.getIdField(), entity, id);
     }
+
+    @Override
+    public <T> T readById(Class<T> clazz, Long id) {
+        return null;
+    }
 }
