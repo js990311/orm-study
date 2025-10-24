@@ -14,6 +14,7 @@ public class EntityMetadata {
     private Field idField;
     private String idColumnName;
     private List<Field> fields;
+    private List<String> columnNames;
 
     public EntityMetadata(String tableName, Field idField, String idColumnName, List<Field> fields) {
         this.tableName = tableName;
@@ -45,7 +46,26 @@ public class EntityMetadata {
         valuesString.append(")");
         sb.append(columnString).append(valuesString);
         return sb.toString();
+    }
 
+    public String buildSelectSql(){
+        StringBuilder sb = new StringBuilder("SELECT ");
+        StringBuilder columnString = new StringBuilder();
+
+        columnString.append(idColumnName).append(",");
+        for(int i=0;i<fields.size();i++){
+            columnString.append(camel2Snake(fields.get(i).getName()));
+
+            if(i != fields.size()-1){
+                columnString.append(",");
+            }
+        }
+
+        sb
+                .append(columnString)
+                .append(" FROM ").append(tableName)
+                .append(" WHERE ").append(idColumnName).append(" = ?");
+        return sb.toString();
     }
 
     public static EntityMetadata from(Class<?> clazz){
@@ -68,7 +88,7 @@ public class EntityMetadata {
         return new EntityMetadata(tableName, idField, idColumnName, columns);
     }
 
-    private static String camel2Snake(String str){
+    public static String camel2Snake(String str){
         if(str == null || str.isEmpty()){
             return str;
         }
