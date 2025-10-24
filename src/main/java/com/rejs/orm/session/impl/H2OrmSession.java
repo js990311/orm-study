@@ -3,6 +3,7 @@ package com.rejs.orm.session.impl;
 import com.rejs.orm.annotations.Column;
 import com.rejs.orm.annotations.Id;
 import com.rejs.orm.session.OrmSession;
+import com.rejs.orm.session.metadata.EntityMetadata;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -23,41 +24,17 @@ public class H2OrmSession implements OrmSession {
     @Override
     public void create(Object entity) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
-
         Class<?> clazz = entity.getClass();
-
-        String tableName = camel2Snake(clazz.getSimpleName()) + "s";
-
-        Field[] fields = clazz.getDeclaredFields();
-        List<Field> columns = new ArrayList<>();
-        Field idField = null;
-
-        for (Field field : fields){
-            if(field.isAnnotationPresent(Id.class)){
-                idField = field;
-            }
-            else if(field.isAnnotationPresent(Column.class)){
-                columns.add(field);
-            }
-        }
-
-        String idColName = camel2Snake(idField.getName());
+        EntityMetadata metadata = EntityMetadata.from(clazz);
 
         jdbcTemplate.update(
                 con -> {
                     PreparedStatement ps = con.prepareStatement(
-                            "INSERT INTO " + tableName + columnToSting(columns), new String[]{idColName}
+                            metadata.buildInsertSql(), new String[]{metadata.getIdColumnName()}
                     );
-                    for(int i=0;i<columns.size();i++) {
-                        Field col = columns.get(i);
-                        col.setAccessible(true);
-                        try {
-                            ps.setObject(i+1, col.get(entity));
-                        } catch (IllegalAccessException e) {
-                            throw new RuntimeException(e);
-                        }finally {
-                            col.setAccessible(false);
-                        }
+                    for(int i=0;i<metadata.getFields().size();i++) {
+                        Field col = metadata.getFields().get(i);
+                        ps.setObject(i+1, EntityMetadata.getFieldValue(col, entity));
                     }
                     return ps;
                 },
@@ -65,38 +42,6 @@ public class H2OrmSession implements OrmSession {
         );
 
         Long id = keyHolder.getKey().longValue();
-        try {
-            idField.setAccessible(true);
-            idField.set(entity, id);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }finally {
-            idField.setAccessible(false);
-        }
-    }
-
-    private String columnToSting(List<Field> columns){
-        String columnString = "(";
-        String valuesString = "VALUES (";
-
-        for(int i=0;i<columns.size();i++){
-            columnString += camel2Snake(columns.get(i).getName());
-            valuesString += "?";
-            if(i != columns.size()-1){
-                columnString += ",";
-                valuesString += ",";
-            }
-        }
-
-        columnString += ") ";
-        valuesString += ")";
-        return columnString + valuesString;
-    }
-
-    private String camel2Snake(String str){
-        if(str == null || str.isEmpty()){
-            return str;
-        }
-        return str.replace("([a-z])([A-Z]+)", "$1_$2").toLowerCase();
+        EntityMetadata.setFieldValue(metadata.getIdField(), entity, id);
     }
 }
