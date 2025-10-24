@@ -3,7 +3,9 @@ package com.rejs.orm.domain.user.entity;
 import com.rejs.orm.annotations.Column;
 import com.rejs.orm.annotations.Entity;
 import com.rejs.orm.annotations.Id;
+import lombok.Getter;
 
+@Getter
 @Entity
 public class User {
     @Id
