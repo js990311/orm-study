@@ -5,6 +5,7 @@ import com.rejs.orm.annotations.Id;
 import com.rejs.orm.session.OrmSession;
 import com.rejs.orm.session.metadata.EntityMetadata;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
@@ -52,27 +53,31 @@ public class H2OrmSession implements OrmSession {
 
         String sql = metadata.buildSelectSql();
 
-        return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
-            T entity = null;
-            try {
-                entity = clazz.getDeclaredConstructor().newInstance();
-                List<Field> fields = metadata.getFields();
+        try {
+            return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+                T entity = null;
+                try {
+                    entity = clazz.getDeclaredConstructor().newInstance();
+                    List<Field> fields = metadata.getFields();
 
-                EntityMetadata.setFieldValue(metadata.getIdField(), entity, rs.getObject(metadata.getIdColumnName()));
-                for(Field field : fields){
-                    Object object = rs.getObject(EntityMetadata.camel2Snake(field.getName()));
-                    EntityMetadata.setFieldValue(field, entity, object);
+                    EntityMetadata.setFieldValue(metadata.getIdField(), entity, rs.getObject(metadata.getIdColumnName()));
+                    for(Field field : fields){
+                        Object object = rs.getObject(EntityMetadata.camel2Snake(field.getName()));
+                        EntityMetadata.setFieldValue(field, entity, object);
+                    }
+                } catch (InstantiationException e) {
+                    throw new RuntimeException(e);
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                } catch (InvocationTargetException e) {
+                    throw new RuntimeException(e);
+                } catch (NoSuchMethodException e) {
+                    throw new RuntimeException(e);
                 }
-            } catch (InstantiationException e) {
-                throw new RuntimeException(e);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            } catch (InvocationTargetException e) {
-                throw new RuntimeException(e);
-            } catch (NoSuchMethodException e) {
-                throw new RuntimeException(e);
-            }
-            return entity;
-        }, id);
+                return entity;
+            }, id);
+        }catch (EmptyResultDataAccessException ex){
+            return null;
+        }
     }
 }
