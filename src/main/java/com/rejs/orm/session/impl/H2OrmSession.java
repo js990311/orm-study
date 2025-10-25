@@ -58,13 +58,11 @@ public class H2OrmSession implements OrmSession {
                 entity = clazz.getDeclaredConstructor().newInstance();
                 List<Field> fields = metadata.getFields();
 
-                EntityMetadata.setFieldValue(metadata.getIdField(), entity, rs.getObject(1));
-
-                for (int i=0;i<fields.size();i++){
-                    Object object = rs.getObject(i+2);
-                    EntityMetadata.setFieldValue(fields.get(i), entity, object);
+                EntityMetadata.setFieldValue(metadata.getIdField(), entity, rs.getObject(metadata.getIdColumnName()));
+                for(Field field : fields){
+                    Object object = rs.getObject(EntityMetadata.camel2Snake(field.getName()));
+                    EntityMetadata.setFieldValue(field, entity, object);
                 }
-                
             } catch (InstantiationException e) {
                 throw new RuntimeException(e);
             } catch (IllegalAccessException e) {

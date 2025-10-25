@@ -14,7 +14,6 @@ public class EntityMetadata {
     private Field idField;
     private String idColumnName;
     private List<Field> fields;
-    private List<String> columnNames;
 
     public EntityMetadata(String tableName, Field idField, String idColumnName, List<Field> fields) {
         this.tableName = tableName;
