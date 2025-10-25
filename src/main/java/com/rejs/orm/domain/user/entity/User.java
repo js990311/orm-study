@@ -4,7 +4,9 @@ import com.rejs.orm.annotations.Column;
 import com.rejs.orm.annotations.Entity;
 import com.rejs.orm.annotations.Id;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@NoArgsConstructor
 @Getter
 @Entity
 public class User {
