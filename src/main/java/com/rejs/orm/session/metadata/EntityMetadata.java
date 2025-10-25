@@ -2,6 +2,7 @@ package com.rejs.orm.session.metadata;
 
 import com.rejs.orm.annotations.Column;
 import com.rejs.orm.annotations.Id;
+import com.rejs.orm.session.metadata.utils.NamingUtils;
 import lombok.Getter;
 
 import java.lang.reflect.Field;
@@ -32,7 +33,7 @@ public class EntityMetadata {
         StringBuilder valuesString = new StringBuilder("VALUES (");
 
         for(int i=0;i<fields.size();i++){
-            columnString.append(camel2Snake(fields.get(i).getName()));
+            columnString.append(NamingUtils.camelToSnake(fields.get(i).getName()));
             valuesString.append("?");
 
             if(i != fields.size()-1){
@@ -53,7 +54,7 @@ public class EntityMetadata {
 
         columnString.append(idColumnName).append(",");
         for(int i=0;i<fields.size();i++){
-            columnString.append(camel2Snake(fields.get(i).getName()));
+            columnString.append(NamingUtils.camelToSnake(fields.get(i).getName()));
 
             if(i != fields.size()-1){
                 columnString.append(",");
@@ -68,7 +69,7 @@ public class EntityMetadata {
     }
 
     public static EntityMetadata from(Class<?> clazz){
-        String tableName = camel2Snake(clazz.getSimpleName()) + "s";
+        String tableName = NamingUtils.camelToSnake(clazz.getSimpleName()) + "s";
 
         Field[] fields = clazz.getDeclaredFields();
         List<Field> columns = new ArrayList<>();
@@ -83,15 +84,8 @@ public class EntityMetadata {
             }
         }
 
-        String idColumnName = camel2Snake(idField.getName());
+        String idColumnName = NamingUtils.camelToSnake(idField.getName());
         return new EntityMetadata(tableName, idField, idColumnName, columns);
-    }
-
-    public static String camel2Snake(String str){
-        if(str == null || str.isEmpty()){
-            return str;
-        }
-        return str.replace("([a-z0-9])([A-Z]+)", "$1_$2").toLowerCase();
     }
 
     public static Object getFieldValue(Field field, Object entity){

@@ -4,6 +4,7 @@ import com.rejs.orm.annotations.Column;
 import com.rejs.orm.annotations.Id;
 import com.rejs.orm.session.OrmSession;
 import com.rejs.orm.session.metadata.EntityMetadata;
+import com.rejs.orm.session.metadata.utils.NamingUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -62,7 +63,7 @@ public class H2OrmSession implements OrmSession {
 
                     EntityMetadata.setFieldValue(metadata.getIdField(), entity, rs.getObject(metadata.getIdColumnName()));
                     for(Field field : fields){
-                        Object object = rs.getObject(EntityMetadata.camel2Snake(field.getName()));
+                        Object object = rs.getObject(NamingUtils.camelToSnake(field.getName()));
                         EntityMetadata.setFieldValue(field, entity, object);
                     }
                 } catch (InstantiationException e) {
