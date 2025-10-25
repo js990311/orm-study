@@ -1,7 +1,6 @@
 package com.rejs.orm.session.metadata;
 
 import com.rejs.orm.annotations.Column;
-import com.rejs.orm.annotations.Id;
 import com.rejs.orm.session.metadata.utils.NamingUtils;
 import lombok.Getter;
 
@@ -12,14 +11,12 @@ import java.util.List;
 @Getter
 public class EntityMetadata {
     private String tableName;
-    private Field idField;
-    private String idColumnName;
-    private List<Field> fields;
+    private ColumnMetadata idField;
+    private List<ColumnMetadata> fields;
 
-    public EntityMetadata(String tableName, Field idField, String idColumnName, List<Field> fields) {
+    public EntityMetadata(String tableName, ColumnMetadata idField, List<ColumnMetadata> fields) {
         this.tableName = tableName;
         this.idField = idField;
-        this.idColumnName = idColumnName;
         this.fields = fields;
     }
 
@@ -33,7 +30,10 @@ public class EntityMetadata {
         StringBuilder valuesString = new StringBuilder("VALUES (");
 
         for(int i=0;i<fields.size();i++){
-            columnString.append(NamingUtils.camelToSnake(fields.get(i).getName()));
+            if(fields.get(i).isId()){
+                continue;
+            }
+            columnString.append(fields.get(i).getColumnName());
             valuesString.append("?");
 
             if(i != fields.size()-1){
@@ -52,9 +52,9 @@ public class EntityMetadata {
         StringBuilder sb = new StringBuilder("SELECT ");
         StringBuilder columnString = new StringBuilder();
 
-        columnString.append(idColumnName).append(",");
+        columnString.append(idField.getColumnName()).append(",");
         for(int i=0;i<fields.size();i++){
-            columnString.append(NamingUtils.camelToSnake(fields.get(i).getName()));
+            columnString.append(fields.get(i).getColumnName());
 
             if(i != fields.size()-1){
                 columnString.append(",");
@@ -64,7 +64,7 @@ public class EntityMetadata {
         sb
                 .append(columnString)
                 .append(" FROM ").append(tableName)
-                .append(" WHERE ").append(idColumnName).append(" = ?");
+                .append(" WHERE ").append(idField.getColumnName()).append(" = ?");
         return sb.toString();
     }
 
@@ -72,41 +72,19 @@ public class EntityMetadata {
         String tableName = NamingUtils.camelToSnake(clazz.getSimpleName()) + "s";
 
         Field[] fields = clazz.getDeclaredFields();
-        List<Field> columns = new ArrayList<>();
-        Field idField = null;
+        List<ColumnMetadata> columns = new ArrayList<>();
+        ColumnMetadata idField = null;
 
         for (Field field : fields){
-            if(field.isAnnotationPresent(Id.class)){
-                idField = field;
+            if(field.isAnnotationPresent(Column.class)){
+                ColumnMetadata columnMetadata = ColumnMetadata.from(field);
+                if(columnMetadata.isId()){
+                    idField = columnMetadata;
+                }
+                columns.add(columnMetadata);
             }
-            else if(field.isAnnotationPresent(Column.class)){
-                columns.add(field);
-            }
         }
 
-        String idColumnName = NamingUtils.camelToSnake(idField.getName());
-        return new EntityMetadata(tableName, idField, idColumnName, columns);
-    }
-
-    public static Object getFieldValue(Field field, Object entity){
-        try {
-            field.setAccessible(true);
-            return field.get(entity);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }finally {
-            field.setAccessible(false);
-        }
-    }
-
-    public static void setFieldValue(Field field, Object entity, Object value){
-        try {
-            field.setAccessible(true);
-            field.set(entity, value);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }finally {
-            field.setAccessible(false);
-        }
+        return new EntityMetadata(tableName, idField, columns);
     }
 }
