@@ -3,7 +3,10 @@ package com.rejs.orm.session.impl;
 import com.rejs.orm.annotations.Column;
 import com.rejs.orm.annotations.Id;
 import com.rejs.orm.session.OrmSession;
+import com.rejs.orm.session.metadata.ColumnMetadata;
 import com.rejs.orm.session.metadata.EntityMetadata;
+import com.rejs.orm.session.metadata.utils.NamingUtils;
+import com.rejs.orm.session.registry.EntityMetadataRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -11,6 +14,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import javax.swing.text.html.parser.Entity;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.PreparedStatement;
@@ -20,23 +24,27 @@ import java.util.List;
 @RequiredArgsConstructor
 @Repository
 public class H2OrmSession implements OrmSession {
-
+    private final EntityMetadataRegistry registry;
     private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void create(Object entity) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         Class<?> clazz = entity.getClass();
-        EntityMetadata metadata = EntityMetadata.from(clazz);
+        EntityMetadata metadata = registry.get(clazz);
 
         jdbcTemplate.update(
                 con -> {
                     PreparedStatement ps = con.prepareStatement(
-                            metadata.buildInsertSql(), new String[]{metadata.getIdColumnName()}
+                            metadata.buildInsertSql(), new String[]{metadata.getIdField().getColumnName()}
                     );
-                    for(int i=0;i<metadata.getFields().size();i++) {
-                        Field col = metadata.getFields().get(i);
-                        ps.setObject(i+1, EntityMetadata.getFieldValue(col, entity));
+                    int idx=1;
+                    for(ColumnMetadata column : metadata.getFields()) {
+                        if(column.isId()){
+                            continue;
+                        }
+                        ps.setObject(idx, column.get(entity));
+                        idx++;
                     }
                     return ps;
                 },
@@ -44,12 +52,12 @@ public class H2OrmSession implements OrmSession {
         );
 
         Long id = keyHolder.getKey().longValue();
-        EntityMetadata.setFieldValue(metadata.getIdField(), entity, id);
+        metadata.getIdField().set(entity, id);
     }
 
     @Override
     public <T> T readById(Class<T> clazz, Long id) {
-        EntityMetadata metadata = EntityMetadata.from(clazz);
+        EntityMetadata metadata = registry.get(clazz);
 
         String sql = metadata.buildSelectSql();
 
@@ -58,12 +66,10 @@ public class H2OrmSession implements OrmSession {
                 T entity = null;
                 try {
                     entity = clazz.getDeclaredConstructor().newInstance();
-                    List<Field> fields = metadata.getFields();
-
-                    EntityMetadata.setFieldValue(metadata.getIdField(), entity, rs.getObject(metadata.getIdColumnName()));
-                    for(Field field : fields){
-                        Object object = rs.getObject(EntityMetadata.camel2Snake(field.getName()));
-                        EntityMetadata.setFieldValue(field, entity, object);
+                    List<ColumnMetadata> fields = metadata.getFields();
+                    for(ColumnMetadata field : fields){
+                        Object object = rs.getObject(field.getColumnName());
+                        field.set(entity, object);
                     }
                 } catch (InstantiationException e) {
                     throw new RuntimeException(e);
