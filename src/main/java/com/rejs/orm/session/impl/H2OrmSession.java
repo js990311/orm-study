@@ -6,6 +6,7 @@ import com.rejs.orm.session.OrmSession;
 import com.rejs.orm.session.metadata.ColumnMetadata;
 import com.rejs.orm.session.metadata.EntityMetadata;
 import com.rejs.orm.session.metadata.utils.NamingUtils;
+import com.rejs.orm.session.registry.EntityMetadataRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -13,6 +14,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import javax.swing.text.html.parser.Entity;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.PreparedStatement;
@@ -22,14 +24,14 @@ import java.util.List;
 @RequiredArgsConstructor
 @Repository
 public class H2OrmSession implements OrmSession {
-
+    private final EntityMetadataRegistry registry;
     private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void create(Object entity) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         Class<?> clazz = entity.getClass();
-        EntityMetadata metadata = EntityMetadata.from(clazz);
+        EntityMetadata metadata = registry.get(clazz);
 
         jdbcTemplate.update(
                 con -> {
@@ -55,7 +57,7 @@ public class H2OrmSession implements OrmSession {
 
     @Override
     public <T> T readById(Class<T> clazz, Long id) {
-        EntityMetadata metadata = EntityMetadata.from(clazz);
+        EntityMetadata metadata = registry.get(clazz);
 
         String sql = metadata.buildSelectSql();
 
