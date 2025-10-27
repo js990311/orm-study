@@ -5,6 +5,7 @@ import com.rejs.orm.annotations.Entity;
 import com.rejs.orm.annotations.Id;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @NoArgsConstructor
 @Getter
