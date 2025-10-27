@@ -3,6 +3,8 @@ package com.rejs.orm.session.impl;
 import com.rejs.orm.annotations.Column;
 import com.rejs.orm.annotations.Id;
 import com.rejs.orm.session.OrmSession;
+import com.rejs.orm.session.context.PersistenceContext;
+import com.rejs.orm.session.context.id.EntityKey;
 import com.rejs.orm.session.metadata.ColumnMetadata;
 import com.rejs.orm.session.metadata.EntityMetadata;
 import com.rejs.orm.session.metadata.utils.NamingUtils;
@@ -25,6 +27,7 @@ import java.util.List;
 @Repository
 public class H2OrmSession implements OrmSession {
     private final EntityMetadataRegistry registry;
+    private final PersistenceContext context;
     private final JdbcTemplate jdbcTemplate;
 
     @Override
@@ -53,21 +56,25 @@ public class H2OrmSession implements OrmSession {
 
         Long id = keyHolder.getKey().longValue();
         metadata.getIdField().set(entity, id);
+
+        context.put(clazz, id, entity);
     }
 
     @Override
     public <T> T readById(Class<T> clazz, Long id) {
+        if(context.contain(clazz, id)){
+            return (T) context.get(clazz,id);
+        }
         EntityMetadata metadata = registry.get(clazz);
-
         String sql = metadata.buildSelectSql();
 
         try {
-            return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
+            T findEntity = jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
                 T entity = null;
                 try {
                     entity = clazz.getDeclaredConstructor().newInstance();
                     List<ColumnMetadata> fields = metadata.getFields();
-                    for(ColumnMetadata field : fields){
+                    for (ColumnMetadata field : fields) {
                         Object object = rs.getObject(field.getColumnName());
                         field.set(entity, object);
                     }
@@ -82,6 +89,8 @@ public class H2OrmSession implements OrmSession {
                 }
                 return entity;
             }, id);
+            context.put(clazz, id, findEntity);
+            return findEntity;
         }catch (EmptyResultDataAccessException ex){
             return null;
         }

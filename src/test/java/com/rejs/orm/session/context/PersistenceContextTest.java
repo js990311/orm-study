@@ -69,12 +69,7 @@ class PersistenceContextTest {
     @Test
     void getNull() {
         // g
-        String username = "username";
-        String password = "password";
-        User user = new User(username, password);
-        session.create(user);
-
-        Long id = user.getId();
+        Long id = 1L;
 
         // w
         Object cachedUser = persistenceContext.get(User.class, id);
@@ -105,12 +100,7 @@ class PersistenceContextTest {
     @Test
     void containFalse() {
         // g
-        String username = "username";
-        String password = "password";
-        User user = new User(username, password);
-        session.create(user);
-
-        Long id = user.getId();
+        Long id = 1L;
 
         // w
         boolean isContain = persistenceContext.contain(User.class, id);
